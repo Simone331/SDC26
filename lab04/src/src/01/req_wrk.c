@@ -20,12 +20,18 @@ int * data;
 *
 * Add any needed resource 
 **/
+int fd;
+sem_t *sem_worker, *sem_request;
 
 int request() {
   /** COMPLETE THE FOLLOWING CODE BLOCK
   *
   * map the shared memory in the data array
   **/
+ data= (int*) mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+ if (data == MAP_FAILED) handle_error("daje roma");
+
+
 
   printf("request: mapped address: %p\n", data);
 
@@ -40,6 +46,11 @@ int request() {
     * Signal the worker that it can start the elaboration
     * and wait it has terminated
     **/
+  if (sem_post(sem_worker)!=0) handle_error("dnjvsj");
+
+  if (sem_wait(sem_request)!=0) handle_error("odfjsdfoos");
+
+  
   printf("request: acquire updated data\n");
 
   printf("request: updated data:\n");
@@ -51,6 +62,7 @@ int request() {
     *
     * Release resources
     **/
+   if (munmap(data, SIZE)!=0) handle_error("idjvsbjivb");
 
 
   return EXIT_SUCCESS;
@@ -62,12 +74,17 @@ int work() {
   *
   * map the shared memory in the data array
   **/
+  data= (int *) mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,fd, 0);
+  if (data == MAP_FAILED) handle_error("hdbladaubaldb");
+
+
   printf("worker: mapped address: %p\n", data);
 
    /** COMPLETE THE FOLLOWING CODE BLOCK
     *
     * Wait that the request() process generated data
     **/
+   if(sem_wait(sem_worker)!=0) handle_error("jvws");
 
   printf("worker: waiting initial data\n");
 
@@ -85,12 +102,14 @@ int work() {
     *
     * Signal the requester that elaboration terminated
     **/
-
+  if (sem_post(sem_request)!=0) handle_error("laijdwvn");
 
   /** COMPLETE THE FOLLOWING CODE BLOCK
    *
    * Release resources
    **/
+  if (munmap(data, SIZE)==-1) handle_error("dhvibv");
+
 
   return EXIT_SUCCESS;
 }
@@ -103,8 +122,18 @@ int main(int argc, char **argv){
     *
     * Create and open the needed resources 
     **/
+   shm_unlink(SHM_NAME);
+   fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
+   if (fd<0) handle_error("madvaklvknkdv");
+   if (ftruncate(fd, SIZE) == -1) handle_error("aihvdadhv");
 
+   sem_unlink(SEM_NAME_WRK);
+   sem_unlink(SEM_NAME_REQ);
 
+   sem_worker= sem_open(SEM_NAME_WRK, O_CREAT | O_EXCL, 0666, 0);
+   if (sem_worker== SEM_FAILED) handle_error("liejfhaehf");
+   sem_request = sem_open(SEM_NAME_REQ, O_CREAT | O_EXCL , 0666, 0);
+   if (sem_request== SEM_FAILED) handle_error("ajbvliab");
 
     int ret;
     pid_t pid = fork();
@@ -127,6 +156,24 @@ int main(int argc, char **argv){
     *
     * Close and release resources
     **/
+   ret = sem_close(sem_worker);
+    if (ret) handle_error("main: sem_close worker");
+    ret = sem_close(sem_request);
+    if (ret) handle_error("main: sem_close request");
+
+    // then unlink
+    ret = sem_unlink(SEM_NAME_REQ);
+    if (ret) handle_error("main: sem_unlink request");
+    ret = sem_unlink(SEM_NAME_WRK);
+    if (ret) handle_error("main: sem_unlink worker");
+
+    ret = close(fd);
+	  if (ret == -1)
+        handle_error("main: cannot close the shared memory");
+
+    ret = shm_unlink(SHM_NAME);
+    if (ret) handle_error("main: shm_unlink");
+   
 
     _exit(EXIT_SUCCESS);
 

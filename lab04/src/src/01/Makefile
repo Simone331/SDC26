@@ -1,4 +1,4 @@
-CFLAGS=-m32 -g -Wall
+CFLAGS= -g -Wall
 all: req_wrk
 
 req_wrk: req_wrk.c common.h
