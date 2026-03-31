@@ -1,4 +1,4 @@
-CFLAGS= -g -Wall
+CFLAGS=-m32 -g -Wall
 all: producer consumer
 
 producer: producer.c common.h

@@ -22,6 +22,7 @@ struct shared_memory {
 //definizione shared memory
 struct shared_memory *myshm_ptr;
 int fd_shm;
+int size= sizeof(struct shared_memory);
 
 //definizione semafori named
 sem_t *sem_empty, *sem_filled, *sem_cs;
@@ -33,6 +34,18 @@ void initMemory() {
      * struct shared_memory, and map the shared memory in the shared_mem_ptr variable.
      * Initialize the shared memory to 0.
      **/
+     fd_shm= shm_open(SH_MEM_NAME, O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fd_shm == -1) handle_error("shm_open error");
+
+    if (ftruncate(fd_shm, size)==-1) handle_error("ftruncate");
+
+    myshm_ptr= mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+    if (myshm_ptr== MAP_FAILED) handle_error("mmap intmemory");
+
+    memset(myshm_ptr, 0, size);
+
+
+
 
 }
 
@@ -41,6 +54,16 @@ void closeMemory() {
      *
      * unmap the shared memory, unlink the shared memory and close its descriptor
      **/
+    int ret;
+    
+    ret= munmap(myshm_ptr, size);
+    if (ret!=0) handle_error("bsfkdfkj");
+
+    ret= shm_unlink(SH_MEM_NAME);
+    if( ret!= 0) handle_error("jf");
+
+    if (close(fd_shm)!=0) handle_error("daje roma");
+
 
 }
 
@@ -104,6 +127,11 @@ void produce(int id, int numOps) {
          * Complete the following code:
          * write value in the buffer inside the shared memory and update the producer position
          */
+        myshm_ptr->buf[myshm_ptr->write_index]=value;
+        myshm_ptr->write_index++;
+        if ( myshm_ptr->write_index == BUFFER_SIZE) myshm_ptr->write_index=0;
+        
+
 
 
         ret = sem_post(sem_cs);
@@ -121,6 +149,8 @@ void produce(int id, int numOps) {
 int main(int argc, char** argv) {
     srand(PRNG_SEED);
     initSemaphores();
+    closeMemory();
+
     initMemory();
 
     int i, ret;

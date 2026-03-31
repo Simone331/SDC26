@@ -23,6 +23,7 @@ struct shared_memory {
 struct shared_memory *myshm_ptr;
 int fd_shm;
 
+
 //definizione semafori named
 sem_t *sem_empty, *sem_filled, *sem_cs;
 
@@ -32,6 +33,11 @@ void openMemory() {
      *
      * Request shared memory to the kernel and map the shared memory in the shared_mem_ptr variable.
      **/
+    int size = sizeof(struct shared_memory);
+    fd_shm = shm_open(SH_MEM_NAME,  O_RDWR | O_CREAT | O_EXCL , 0600);
+    if (fd_shm == -1) handle_error("ndjs");
+    myshm_ptr = mmap (0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+    if ( myshm_ptr == MAP_FAILED) handle_error("mmap openmemory");
 }
 
 void closeMemory() {
@@ -39,6 +45,9 @@ void closeMemory() {
      *
      * unmap the shared memory and close its descriptor
      **/
+    int size = sizeof(struct shared_memory);
+    if (munmap(myshm_ptr, size)!=0) handle_error("munmap closememory");
+    if (shm_unlink(SH_MEM_NAME)!=0) handle_error("unlink closememory");
 }
 
 
@@ -96,6 +105,11 @@ void consume(int id, int numOps) {
          * Complete the following code:
          * read value from buffer inside the shared memory and update the consumer position
          */
+        int x;
+        x=myshm_ptr->buf[myshm_ptr->read_index];
+        myshm_ptr->read_index++;
+        if (myshm_ptr->read_index==BUFFER_SIZE) myshm_ptr->read_index=0;
+
 
 
         ret = sem_post(sem_cs);
@@ -104,7 +118,7 @@ void consume(int id, int numOps) {
         ret = sem_post(sem_empty);
         if (ret) handle_error("sem_post empty");
 
-        localSum += value;
+        localSum += x;
         numOps--;
     }
     printf("Consumer %d ended. Local sum is %d\n", id, localSum);

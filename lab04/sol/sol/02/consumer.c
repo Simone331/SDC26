@@ -134,6 +134,7 @@ void consume(int id, int numOps) {
 int main(int argc, char** argv) {
 
     openSemaphores();
+    closeMemory();
     openMemory();
 
     int i;
