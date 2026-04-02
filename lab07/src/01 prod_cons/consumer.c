@@ -20,8 +20,8 @@ void openFIFO() {
      *
      * Open the FIFO
      **/
-
- 
+    fifo = open(FIFO_NAME, O_RDONLY);
+    if (fifo == -1) handle_error("error fifo open");
 
 }
 
@@ -32,6 +32,10 @@ static void closeFIFO() {
      * - Close the fifo
      * - Destroy the fifo
      * */
+    if (close(fifo)) handle_error("error fifo close");
+
+    if (unlink(FIFO_NAME)) handle_error("error fifo unlink");
+
 
 }
 
@@ -52,6 +56,16 @@ int readValue(int * value) {
      *   dealt with!
      **/
     int bytes_read = 0;
+    do
+    {
+        ret= read(fifo, value, sizeof(int));
+        if (ret==-1 && errno ==EINTR) continue;
+        if (ret==-1) handle_error("dvns");
+        if (ret==0) handle_error("ndvndnv");
+        if (ret!= sizeof(int)) handle_error("njdvws");
+        bytes_read+=ret;
+    } while (bytes_read!=sizeof(int));
+    
 
     return bytes_read;
 }

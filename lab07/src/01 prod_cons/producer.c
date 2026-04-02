@@ -20,6 +20,10 @@ void initFIFO() {
      *
      * Request the kernel to create a FIFO and open it
      **/
+    int ret = mkfifo(FIFO_NAME, 0666);
+    if (ret) handle_error("Cannot create FIFO");
+    fifo = open(FIFO_NAME, O_WRONLY);
+    if (fifo == -1) handle_error("Cannot open FIFO for writing");       
 
 }
 
@@ -29,6 +33,8 @@ static void closeFIFO() {
      *
      * - Close the fifo
      * */
+    int ret = close(fifo);
+    if (ret) handle_error("Cannot close FIFO");
 
 
 }
@@ -52,7 +58,7 @@ static inline int performRandomTransaction() {
 
 int writeValue(int value) {
 
-    int ret;
+    int ret, bytes_sent = 0;
     /** [TO DO] SEND THE VALUE THROUGH THE FIFO DESCRIPTOR
      *
      * Suggestions:
@@ -60,6 +66,14 @@ int writeValue(int value) {
      * - make sure that all the bytes have been written: use a while
      *   cycle in the implementation as we did for file descriptors!
      **/
+
+    while (bytes_sent != sizeof(int)) {
+        ret = write(fifo,&value, sizeof(int));
+        if (ret == -1 && errno == EINTR) continue;
+        if (ret == -1) handle_error("Cannot write to FIFO");
+        if (ret != sizeof(int)) handle_error_en(ret, "Partial write to FIFO");
+        bytes_sent = ret;
+    }
     return bytes_sent;
 }
 
