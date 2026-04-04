@@ -30,6 +30,11 @@ void connection_handler(int socket_desc) {
      *   recv() we will get stuck since the call is blocking!
      * - store the number of received bytes in recv_bytes
      */
+    while ( (recv_bytes = recv(socket_desc, recv_buf, recv_buf_len, 0)) < 0 ) {
+        if (errno == EINTR) continue;
+        handle_error("Cannot read from socket");
+    }
+
 
     if (DEBUG) fprintf(stderr, "Message of %d bytes received\n", recv_bytes);
 
@@ -51,6 +56,10 @@ void connection_handler(int socket_desc) {
      * - send() with flags = 0 is equivalent to write() on a descriptor
      * - for now don't deal with messages partially sent
      */
+    while ((ret = send(socket_desc, send_buf, server_message_len, 0))<0){
+        if (errno==EINTR) continue;
+        handle_error("jifhvasjkghfio");
+    }
    
     if (DEBUG) fprintf(stderr, "Message of %d bytes sent\n", ret);
 

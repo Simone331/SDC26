@@ -1,4 +1,4 @@
-CFLAGS= -g -Wall
+CFLAGS=-g -Wall
 all: producer consumer
 
 producer: producer.c common.h

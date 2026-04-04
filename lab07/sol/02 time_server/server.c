@@ -32,10 +32,10 @@ void connection_handler(int socket_desc) {
      *
      * For the time being we don't deal with partially received replies!
      */     
-    while ( (recv_bytes = recv(socket_desc, recv_buf, recv_buf_len, 0)) < 0 ) {
-        if (errno == EINTR) continue;
-        handle_error("Cannot read from socket");
-    }     
+        while ( (recv_bytes = recv(socket_desc, recv_buf, recv_buf_len, 0)) < 0 ) {
+            if (errno == EINTR) continue;
+            handle_error("Cannot read from socket");
+        }     
 
     if (DEBUG) fprintf(stderr, "Message of %d bytes received\n", recv_bytes);
 
