@@ -19,6 +19,7 @@ unsigned int shared_counters[N];
     * - dichiarare i semafori necessari per garantire la mutua esclusione 
     *   nell'accesso alle celle dell'array shared_counters
     **/	 
+   sem_t s[N];
 
 // struttura dati con gli argomenti per thread connection_handler
 typedef struct handler_args_s {
@@ -141,6 +142,9 @@ int main(int argc, char* argv[]) {
      * - gestire eventuali errori di inizializzazione
      **/
     int ret;
+    for (int i=0; i<n ; i++){
+        ret=sem_init(&s[i], 0, 1);
+    }
     
     
     // creo le strutture per la socket
