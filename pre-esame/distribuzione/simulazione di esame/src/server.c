@@ -36,7 +36,11 @@ unsigned int process_resource(unsigned int client_id, unsigned int resource_id) 
      * - gestire la mutua esclusione tra thread che provano ad accedere
      *   alla cella 'resource_id'-esima nella sezione critica
      * - gestire eventuali errori
-     **/	 
+     **/
+    int ret;
+    ret=sem_wait(&s[resource_id]);
+    if(ret) handle_error("error on wait");
+
 
     printf("Risorsa %u LOCKED dal client %u! Processamento in corso...\n", resource_id, client_id);
     
@@ -45,6 +49,9 @@ unsigned int process_resource(unsigned int client_id, unsigned int resource_id) 
     printf("Nuovo contatore per risorsa %u: %u\n", resource_id, counter_updated);
     sleep(SLEEP_TIME);
     /* fine sezione critica */
+
+    ret=sem_post(&s[resource_id]);
+    if(ret) handle_error("error on post");
     
     printf("Risorsa %u UNLOCKED\n", resource_id);
     
@@ -90,6 +97,18 @@ void* connection_handler(void* arg) {
          * Si tenga a mente che l'ultimo byte valido in un messaggio (la
          * cui lunghezza NON è nota a priori) è il terminatore di riga '\n'.
          **/
+        bytes_read=0;
+        while(1){
+            
+            ret=recv(socket_desc, buf+bytes_read, 1, 0);
+            if(ret==-1 && errno== EINTR) continue;
+            if(ret==-1) handle_error("errore lettura");
+            if(ret==0) handle_error("letto 0");
+            printf("byte letto: %c\n", buf[bytes_read]);
+            if(buf[bytes_read++]=='\n') break;
+            if(bytes_read==sizeof(buf)) handle_error("messaggio maggiore del buf");
+        }
+
         
         
         
@@ -116,6 +135,13 @@ void* connection_handler(void* arg) {
          * - gestire eventuali interruzioni ed errori
          * - assicurarsi che tutti i byte siano stati scritti
          **/
+        int w=0;
+        while(w<msg_len){
+            ret=send(socket_desc, buf+w, msg_len-w, 0);
+            if(ret==-1 && errno==EINTR) continue;
+            if(ret==-1) handle_error("send");
+            w+=ret;
+        }
     }
     
     /**
@@ -126,6 +152,8 @@ void* connection_handler(void* arg) {
      * - gestire eventuali errori
      * - liberare memoria in uso al thread
      */
+    ret=close(socket_desc);
+    if(ret) handle_error("close socket");
      
     printf("Thread connection_handler terminato\n");
     
@@ -142,8 +170,9 @@ int main(int argc, char* argv[]) {
      * - gestire eventuali errori di inizializzazione
      **/
     int ret;
-    for (int i=0; i<n ; i++){
+    for (int i=0; i<N ; i++){
         ret=sem_init(&s[i], 0, 1);
+        if(ret) handle_error("Impossibile inizializzare semaforo");
     }
     
     
@@ -202,6 +231,13 @@ int main(int argc, char* argv[]) {
          * Si tenga a mente che NON verranno effettuate in futuro
          * operazioni di join sul thread appena creato.
          **/
+        handler_args_t* arg= calloc(1, sizeof(handler_args_t));
+        arg->client_addr=client_addr;
+        arg->socket_desc=client_desc;
+        arg->client_id=client_id;
+        ret= pthread_create(&thread,NULL, connection_handler,arg);
+        if(ret) handle_error("error create");
+
         
         
         
